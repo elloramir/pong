@@ -1,0 +1,85 @@
+<html>
+<head>
+    <style>
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .middle-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="middle-screen">
+        <span>
+            <h1>Pong</h1>
+            <canvas id="game"></canvas>
+        </span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const context = canvas.getContext('2d');
+        const socket = new WebSocket('ws://localhost:1234');
+
+        const WIDTH = 600
+        const HEIGHT = 480
+        const PADDLE_HEIGHT = 100
+        const PADDLE_WIDTH = 10
+        const BALL_SIZE = 10
+
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        socket.onopen = function() {
+            console.log('Connection established');
+
+            document.addEventListener('mousemove', function(event) {
+                // y relative to canvas
+                const y = event.clientY - canvas.offsetTop - PADDLE_HEIGHT / 2;
+                const normalized = Math.min(Math.max(y, 0), HEIGHT - PADDLE_HEIGHT);
+
+                socket.send(normalized);
+            });
+        };
+
+        // sim professor, eu sou preguiçoso...
+        socket.onmessage = function(event) {
+            const state = JSON.parse(event.data);
+            
+            // draw paddles
+            context.clearRect(0, 0, WIDTH, HEIGHT);
+            context.fillStyle = '#fff';
+            context.fillRect(0, state.lPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+            context.fillRect(WIDTH - PADDLE_WIDTH, state.rPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+            // draw score
+            context.font = '48px serif';
+            context.textAlign = 'center';
+            context.fillText(state.lScore, 100, 50);
+            context.fillText(state.rScore, WIDTH - 100, 50);
+
+            if(state.ended) {
+                context.fillText('Game Over', WIDTH / 2, HEIGHT / 2);
+            } else {
+                // draw ball
+                context.fillRect(state.ballX, state.ballY, BALL_SIZE, BALL_SIZE);
+            }
+        };
+    </script>
+</body>
+</html>
